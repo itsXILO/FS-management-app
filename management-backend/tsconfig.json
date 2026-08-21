@@ -7,6 +7,8 @@
     /* Node ESM */
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
 
     /* Project structure */
     "rootDir": "src",

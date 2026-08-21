@@ -20,6 +20,8 @@ import { SubjectsList } from "./pages/subjects/list.tsx";
 import ClassesList from "./pages/classes/list.tsx";
 import { SubjectsCreate } from "./pages/subjects/create.tsx";
 import ClassesCreate from "./pages/classes/create.tsx";
+import QuizzesList from "./pages/classes/quizzes/list.tsx";
+import QuizzesCreate from "./pages/classes/quizzes/create.tsx";
 import LoginPage from "./pages/login.tsx";
 import RegisterPage from "./pages/register.tsx";
 import { useIsAuthenticated } from "@refinedev/core";
@@ -106,6 +108,10 @@ function App() {
                   <Route path="classes">
                     <Route index element={<ClassesList />} />
                     <Route path="create" element={<ClassesCreate />} />
+                    <Route path=":classId/quizzes">
+                      <Route index element={<QuizzesList />} />
+                      <Route path="create" element={<QuizzesCreate />} />
+                    </Route>
                   </Route>
                 </Route>
               </Routes>

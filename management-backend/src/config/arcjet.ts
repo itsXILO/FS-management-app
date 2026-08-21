@@ -9,6 +9,9 @@ if(!process.env.ARCJET_KEY && process.env.NODE_ENV !== 'test') {
   throw new Error("ARCJET_KEY is not set");
 }
 
+// in development, run rules in DRY_RUN (log only) so tools like curl/Postman are not blocked
+const isDev = process.env.ARCJET_ENV === "development";
+
 const aj = arcjet({
 
   // Get your site key from https://app.arcjet.com and set it as an environment
@@ -22,13 +25,13 @@ const aj = arcjet({
 
     // Shield protects your app from common attacks e.g. SQL injection
 
-    shield({ mode: "LIVE" }),
+    shield({ mode: isDev ? "DRY_RUN" : "LIVE" }),
 
     // Create a bot detection rule
 
     detectBot({
 
-      mode: "LIVE", // Blocks requests. Use "DRY_RUN" to log only
+      mode: isDev ? "DRY_RUN" : "LIVE", // Blocks requests. Use "DRY_RUN" to log only
 
       // Block all bots except the following
 

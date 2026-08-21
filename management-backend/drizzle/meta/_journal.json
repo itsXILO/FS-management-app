@@ -36,6 +36,13 @@
       "when": 1773860097248,
       "tag": "0003_supreme_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787319870339,
+      "tag": "0005_open_stryfe",
+      "breakpoints": true
     }
   ]
 }

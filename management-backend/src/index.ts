@@ -6,6 +6,7 @@ import cors from "cors";
 import subjectRouter from "./routes/subject.js";
 import classRouter from "./routes/classes.js";
 import userRouter from "./routes/users.js";
+import quizRouter, { quizRouter as quizDetailRouter } from "./routes/quizzes.js";
 import { fileURLToPath } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
 import securityMiddleware from "./middleware/security.js";
@@ -54,6 +55,8 @@ app.use(sessionMiddleware);
 app.use(securityMiddleware);
 app.use("/api/subjects", subjectRouter);
 app.use("/api/classes", classRouter);
+app.use("/api/classes", quizRouter);
+app.use("/api/quizzes", quizDetailRouter);
 app.use("/api/users", userRouter);
 
 app.get("/", (_req, res) => {

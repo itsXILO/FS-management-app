@@ -10,7 +10,10 @@ import { useTable } from "@refinedev/react-table";
 import { DataTable } from "@/components/refine-ui/data-table/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useList, useGetIdentity } from "@refinedev/core";
+import { useNavigate } from "react-router";
+import { ListChecks } from "lucide-react";
 import type { Subject, User } from "@/types/index";
 
 type ClassRow = {
@@ -35,6 +38,7 @@ function ClassesList() {
 
   const { data: identity } = useGetIdentity<{ role?: string }>();
   const canCreateClasses = identity?.role === "teacher";
+  const navigate = useNavigate();
 
   const { result: subjectListResult } = useList<Subject>({
     resource: "subjects",
@@ -166,8 +170,28 @@ function ClassesList() {
             <span className="text-foreground">{getValue<number>() ?? "-"}</span>
           ),
         },
+        ...(canCreateClasses
+          ? [
+              {
+                id: "actions",
+                size: 130,
+                header: () => <p className="column-title">Actions</p>,
+                cell: ({ row }: { row: { original: ClassRow } }) => (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigate(`/classes/${row.original.id}/quizzes`)
+                    }
+                  >
+                    <ListChecks /> Quizzes
+                  </Button>
+                ),
+              } satisfies ColumnDef<ClassRow>,
+            ]
+          : []),
       ],
-      []
+      [canCreateClasses, navigate]
     ),
     refineCoreProps: {
       resource: "classes",

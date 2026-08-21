@@ -120,3 +120,33 @@ export type SignUpPayload = {
   imageCldPubId?: string;
   role: UserRole;
 };
+
+export type QuizOption = {
+  id: number;
+  optionText: string;
+  position: number;
+  isCorrect?: boolean;
+};
+
+export type QuizQuestion = {
+  id: number;
+  questionText: string;
+  position: number;
+  options: QuizOption[];
+};
+
+export type Quiz = {
+  id: number;
+  classId: number;
+  title: string;
+  description?: string | null;
+  durationMinutes: number;
+  deadline: string;
+  createdAt: string;
+  questionCount?: number;
+};
+
+export type QuizDetail = Quiz & {
+  isOwner: boolean;
+  questions: QuizQuestion[];
+};

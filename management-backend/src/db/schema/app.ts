@@ -1,6 +1,6 @@
-import { timestamp, integer, pgTable, text, varchar, jsonb, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { timestamp, integer, boolean, pgTable, text, varchar, jsonb, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { user } from './auth.js';
+import { user } from './auth.ts';
 
 const timesstamp = {
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -61,6 +61,63 @@ export const enrollments = pgTable('enrollments', {
 	enrollmentsClassIdIdx: index('enrollments_class_id_idx').on(table.classId)
 }));
 
+export const quizzes = pgTable('quizzes', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	classId: integer('class_id').notNull().references(() => classes.id, { onDelete: 'cascade' }),
+	title: varchar('title', { length: 255 }).notNull(),
+	description: text('description'),
+	// per-attempt time limit in minutes (e.g. 10)
+	durationMinutes: integer('duration_minutes').notNull(),
+	// quiz is open until this timestamp
+	deadline: timestamp('deadline', { withTimezone: true }).notNull(),
+	...timesstamp
+}, (table)=>({
+	quizzesClassIdIdx: index('quizzes_class_id_idx').on(table.classId)
+}));
+
+export const questions = pgTable('questions', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	quizId: integer('quiz_id').notNull().references(() => quizzes.id, { onDelete: 'cascade' }),
+	questionText: text('question_text').notNull(),
+	position: integer('position').notNull().default(0),
+	...timesstamp
+}, (table)=>({
+	questionsQuizIdIdx: index('questions_quiz_id_idx').on(table.quizId)
+}));
+
+export const questionOptions = pgTable('question_options', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	questionId: integer('question_id').notNull().references(() => questions.id, { onDelete: 'cascade' }),
+	optionText: text('option_text').notNull(),
+	isCorrect: boolean('is_correct').notNull().default(false),
+	position: integer('position').notNull().default(0)
+}, (table)=>({
+	questionOptionsQuestionIdIdx: index('question_options_question_id_idx').on(table.questionId)
+}));
+
+export const quizAttempts = pgTable('quiz_attempts', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	quizId: integer('quiz_id').notNull().references(() => quizzes.id, { onDelete: 'cascade' }),
+	studentId: text('student_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+	startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+	submittedAt: timestamp('submitted_at', { withTimezone: true }),
+	score: integer('score'),
+	totalQuestions: integer('total_questions').notNull()
+}, (table)=>({
+	attemptStudentQuizUniqueIdx: uniqueIndex('attempt_student_quiz_unique_idx').on(table.studentId, table.quizId),
+	quizAttemptsQuizIdIdx: index('quiz_attempts_quiz_id_idx').on(table.quizId)
+}));
+
+export const quizAnswers = pgTable('quiz_answers', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	attemptId: integer('attempt_id').notNull().references(() => quizAttempts.id, { onDelete: 'cascade' }),
+	questionId: integer('question_id').notNull().references(() => questions.id, { onDelete: 'cascade' }),
+	selectedOptionId: integer('selected_option_id').notNull().references(() => questionOptions.id, { onDelete: 'cascade' }),
+	isCorrect: boolean('is_correct').notNull().default(false)
+}, (table)=>({
+	quizAnswersAttemptIdIdx: index('quiz_answers_attempt_id_idx').on(table.attemptId)
+}));
+
 
 export const departmentRelations = relations(departments, ({ many })=>({ subjects: many(subjects) }));
 
@@ -95,6 +152,57 @@ export const enrollmentRelations = relations(enrollments, ({ one })=>({
 	})
 }));
 
+export const quizRelations = relations(quizzes, ({ one, many })=>({
+	class: one(classes, {
+		fields: [quizzes.classId],
+		references: [classes.id]
+	}),
+	questions: many(questions),
+	attempts: many(quizAttempts)
+}));
+
+export const questionRelations = relations(questions, ({ one, many })=>({
+	quiz: one(quizzes, {
+		fields: [questions.quizId],
+		references: [quizzes.id]
+	}),
+	options: many(questionOptions)
+}));
+
+export const questionOptionRelations = relations(questionOptions, ({ one })=>({
+	question: one(questions, {
+		fields: [questionOptions.questionId],
+		references: [questions.id]
+	})
+}));
+
+export const quizAttemptRelations = relations(quizAttempts, ({ one, many })=>({
+	quiz: one(quizzes, {
+		fields: [quizAttempts.quizId],
+		references: [quizzes.id]
+	}),
+	student: one(user, {
+		fields: [quizAttempts.studentId],
+		references: [user.id]
+	}),
+	answers: many(quizAnswers)
+}));
+
+export const quizAnswerRelations = relations(quizAnswers, ({ one })=>({
+	attempt: one(quizAttempts, {
+		fields: [quizAnswers.attemptId],
+		references: [quizAttempts.id]
+	}),
+	question: one(questions, {
+		fields: [quizAnswers.questionId],
+		references: [questions.id]
+	}),
+	selectedOption: one(questionOptions, {
+		fields: [quizAnswers.selectedOptionId],
+		references: [questionOptions.id]
+	})
+}));
+
 export type Department = typeof departments.$inferSelect;
 export type NewDepartment = typeof departments.$inferInsert;
 
@@ -106,3 +214,15 @@ export type NewClass = typeof classes.$inferInsert;
 
 export type Enrollment = typeof enrollments.$inferSelect;
 export type NewEnrollment = typeof enrollments.$inferInsert;
+
+export type Quiz = typeof quizzes.$inferSelect;
+export type NewQuiz = typeof quizzes.$inferInsert;
+
+export type Question = typeof questions.$inferSelect;
+export type NewQuestion = typeof questions.$inferInsert;
+
+export type QuestionOption = typeof questionOptions.$inferSelect;
+export type NewQuestionOption = typeof questionOptions.$inferInsert;
+
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
+export type NewQuizAttempt = typeof quizAttempts.$inferInsert;

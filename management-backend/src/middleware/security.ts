@@ -48,6 +48,8 @@ const securityMiddleware = async (req: Request, res: Response, next: NextFunctio
     if(process.env.NODE_ENV === 'test') {
         return next();
     }
+    // development mode: Arcjet rules run in DRY_RUN, so decisions never block
+    const isDev = process.env.ARCJET_ENV === 'development';
     try{
         const role: RateLimitRole = req.user?.role ?? 'guest';
 
@@ -63,6 +65,10 @@ const securityMiddleware = async (req: Request, res: Response, next: NextFunctio
                 url: req.originalUrl,
                 conclusion: decision.conclusion,
             });
+        }
+
+        if (isDev) {
+            return next();
         }
 
 

@@ -76,3 +76,67 @@ export const enrollmentSchema = z.object({
     .min(1, "Class ID is required"),
   studentId: z.string().min(1, "Student ID is required"),
 });
+
+const quizOptionSchema = z.object({
+  optionText: z
+    .string()
+    .min(1, "Option text is required")
+    .max(500, "Option must be at most 500 characters"),
+});
+
+const quizQuestionSchema = z
+  .object({
+    questionText: z
+      .string()
+      .min(3, "Question must be at least 3 characters")
+      .max(1000, "Question must be at most 1000 characters"),
+    // min 2 options, max 4 options per question
+    options: z
+      .array(quizOptionSchema)
+      .min(2, "Provide at least 2 options")
+      .max(4, "Provide at most 4 options"),
+    correctIndex: z.coerce.number().min(0, "Mark the correct option"),
+  })
+  .superRefine((question, ctx) => {
+    if (question.correctIndex >= question.options.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["correctIndex"],
+        message: "Mark the correct option",
+      });
+    }
+  });
+
+export const quizSchema = z.object({
+  title: z
+    .string()
+    .min(3, "Quiz title must be at least 3 characters")
+    .max(255, "Quiz title must be at most 255 characters"),
+  description: z
+    .string()
+    .max(1000, "Description must be at most 1000 characters")
+    .optional(),
+  durationMinutes: z.coerce
+    .number({
+      required_error: "Timer duration is required",
+      invalid_type_error: "Timer duration is required",
+    })
+    .int("Use whole minutes")
+    .min(1, "Timer must be at least 1 minute")
+    .max(600, "Timer must be at most 600 minutes"),
+  deadline: z
+    .string()
+    .min(1, "Deadline is required")
+    .refine((value) => !Number.isNaN(Date.parse(value)), {
+      message: "Enter a valid date and time",
+    })
+    .refine((value) => Date.parse(value) > Date.now(), {
+      message: "Deadline must be in the future",
+    }),
+  questions: z
+    .array(quizQuestionSchema)
+    .min(1, "Add at least one question")
+    .max(100, "A quiz can have at most 100 questions"),
+});
+
+export type QuizFormValues = z.infer<typeof quizSchema>;
