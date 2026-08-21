@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+README.MD
+vercel.json
+npm-debug.log*

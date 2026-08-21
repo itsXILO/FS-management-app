@@ -1,37 +1,36 @@
-# This Dockerfile uses `serve` npm package to serve the static files with node process.
-# You can find the Dockerfile for nginx in the following link:
-# https://github.com/refinedev/dockerfiles/blob/main/vite/Dockerfile.nginx
-FROM refinedev/node:18 AS base
+# This Dockerfile builds the Refine (Vite) app and serves the static files
+# with the `serve` package, including SPA fallback for client-side routes.
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY .npmrc package.json package-lock.json ./
+RUN npm ci
 
-FROM base as deps
-
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
-
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
-
-FROM base as builder
-
-ENV NODE_ENV production
-
-COPY --from=deps /app/refine/node_modules ./node_modules
+FROM deps AS builder
+# Vite bakes VITE_* variables in at build time, so pass them as build args:
+# docker build --build-arg VITE_BACKEND_BASE_URL=http://localhost:4000 .
+ARG VITE_BACKEND_BASE_URL=http://localhost:4000
+ARG VITE_CLOUDINARY_CLOUD_NAME=
+ARG VITE_CLOUDINARY_UPLOAD_PRESET=
+ENV VITE_BACKEND_BASE_URL=$VITE_BACKEND_BASE_URL \
+    VITE_CLOUDINARY_CLOUD_NAME=$VITE_CLOUDINARY_CLOUD_NAME \
+    VITE_CLOUDINARY_UPLOAD_PRESET=$VITE_CLOUDINARY_UPLOAD_PRESET
 
 COPY . .
-
 RUN npm run build
 
-FROM base as runner
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=3000
 
-ENV NODE_ENV production
+RUN npm install -g serve@14 && npm cache clean --force
 
-RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
 
-COPY --from=builder /app/refine/dist ./
+# run as the non-root "node" user that ships with the base image
+USER node
 
-USER refine
+EXPOSE 3000
 
-CMD ["serve"]
+# "-s" enables single-page mode so routes like /login work on refresh
+CMD ["serve", "-s", "dist", "-l", "3000"]

@@ -6,7 +6,7 @@ import routerProvider, {
   DocumentTitleHandler,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { BookOpen, Home } from "lucide-react";
+import { BookOpen, Home, ListChecks } from "lucide-react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import "./App.css";
 import { Toaster } from "./components/refine-ui/notification/toaster.tsx";
@@ -22,6 +22,7 @@ import { SubjectsCreate } from "./pages/subjects/create.tsx";
 import ClassesCreate from "./pages/classes/create.tsx";
 import QuizzesList from "./pages/classes/quizzes/list.tsx";
 import QuizzesCreate from "./pages/classes/quizzes/create.tsx";
+import QuizzesPage from "./pages/quizzes/list.tsx";
 import LoginPage from "./pages/login.tsx";
 import RegisterPage from "./pages/register.tsx";
 import { useIsAuthenticated } from "@refinedev/core";
@@ -92,6 +93,14 @@ function App() {
                     icon: <BookOpen />
                   }
 
+                },
+                {
+                  name: "quizzes",
+                  list: "/quizzes",
+                  meta: {
+                    label: "Quizzes",
+                    icon: <ListChecks />
+                  }
                 }
               ]}
             >
@@ -113,6 +122,7 @@ function App() {
                       <Route path="create" element={<QuizzesCreate />} />
                     </Route>
                   </Route>
+                  <Route path="quizzes" element={<QuizzesPage />} />
                 </Route>
               </Routes>
               <Toaster />

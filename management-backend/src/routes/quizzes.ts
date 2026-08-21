@@ -2,7 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import express from 'express';
 import db from '../db/index.js';
 import requireRole from '../middleware/require-role.js';
-import { classes, questionOptions, questions, quizzes } from '../db/schema/index.js';
+import { classes, enrollments, questionOptions, questions, quizzes } from '../db/schema/index.js';
 
 const router = express.Router();
 
@@ -204,6 +204,49 @@ router.get('/:classId/quizzes', requireRole(), async (req, res) => {
 
 // quiz detail / delete (nested under /quizzes)
 const quizRouter = express.Router();
+
+// list all quizzes visible to the current user:
+// teachers -> quizzes of their own classes, students -> quizzes of enrolled classes, admin -> all
+quizRouter.get('/', requireRole(), async (req, res) => {
+    try {
+        const role = req.user!.role;
+
+        let query = db
+            .select({
+                id: quizzes.id,
+                classId: quizzes.classId,
+                className: classes.name,
+                title: quizzes.title,
+                description: quizzes.description,
+                durationMinutes: quizzes.durationMinutes,
+                deadline: quizzes.deadline,
+                createdAt: quizzes.createdAt,
+                questionCount: sql<number>`count(${questions.id})`
+            })
+            .from(quizzes)
+            .innerJoin(classes, eq(classes.id, quizzes.classId))
+            .leftJoin(questions, eq(questions.quizId, quizzes.id))
+            .$dynamic();
+
+        if (role === 'teacher') {
+            query = query.where(eq(classes.teacherId, req.user!.id));
+        } else if (role === 'student') {
+            query = query.innerJoin(
+                enrollments,
+                sql`${enrollments.classId} = ${quizzes.classId} and ${enrollments.studentId} = ${req.user!.id}`
+            );
+        }
+
+        const quizList = await query.groupBy(quizzes.id, classes.name).orderBy(asc(quizzes.deadline));
+
+        res.status(200).json({
+            data: quizList.map((quiz) => ({ ...quiz, questionCount: Number(quiz.questionCount) }))
+        });
+    } catch (e) {
+        console.error(`GET /quizzes error: ${e}`);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 // full quiz with questions and options (answer key hidden from non-owners)
 quizRouter.get('/:quizId', requireRole(), async (req, res) => {
