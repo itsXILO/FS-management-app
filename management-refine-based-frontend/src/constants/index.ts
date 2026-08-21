@@ -66,7 +66,11 @@ const envOr = (key: keyof ImportMetaEnv, fallback = ""): string => {
 export const CLOUDINARY_CLOUD_NAME = envOr("VITE_CLOUDINARY_CLOUD_NAME");
 export const CLOUDINARY_UPLOAD_PRESET = envOr("VITE_CLOUDINARY_UPLOAD_PRESET");
 
-export const BACKEND_BASE_URL = envOr(
-  "VITE_BACKEND_BASE_URL",
-  "http://localhost:4000",
-);
+// "same-origin" makes all API calls use relative URLs (/api/...), which is what
+// we want when nginx proxies /api on the deployment server
+const backendUrlRaw = import.meta.env.VITE_BACKEND_BASE_URL?.trim();
+
+export const BACKEND_BASE_URL =
+  backendUrlRaw === "same-origin"
+    ? ""
+    : envOr("VITE_BACKEND_BASE_URL", "http://localhost:4000");

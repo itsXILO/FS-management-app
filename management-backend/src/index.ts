@@ -29,6 +29,10 @@ const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const authHandler = toNodeHandler(auth);
 
+// behind the nginx reverse proxy (docker-compose "proxy" service) so req.ip
+// resolves to the real client from X-Forwarded-For (used by Arcjet)
+app.set("trust proxy", true);
+
 // CORS configuration to allow requests from the frontend
 const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 

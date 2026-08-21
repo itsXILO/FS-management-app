@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false # never abort a running deployment
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync project files
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude '.env' \
+            --exclude '.npm-debug.log*' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            ./ "$EC2_USER@$EC2_HOST:/opt/classroom/"
+
+      - name: Build & restart containers
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            "$EC2_USER@$EC2_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          cd /opt/classroom
+
+          if [ ! -f management-backend/.env ]; then
+            echo "::error::management-backend/.env is missing on the server."
+            echo "::error::Create it once with DATABASE_URL, BETTER_AUTH_SECRET, ARCJET_KEY,"
+            echo "::error::FRONTEND_URL=http://<EC2_IP>, BETTER_AUTH_URL=http://<EC2_IP>"
+            exit 1
+          fi
+
+          docker compose up -d --build
+          docker image prune -f
+          REMOTE
+
+      - name: Smoke test
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          sleep 5
+          api=$(curl -s -o /dev/null -w '%{http_code}' "http://$EC2_HOST/api/users")
+          web=$(curl -s -o /dev/null -w '%{http_code}' "http://$EC2_HOST/")
+          echo "backend via proxy: HTTP $api | frontend: HTTP $web"
+          if [[ ! "$api" =~ ^(200|401|403)$ || "$web" != "200" ]]; then
+            echo "::error::Smoke test failed"
+            exit 1
+          fi

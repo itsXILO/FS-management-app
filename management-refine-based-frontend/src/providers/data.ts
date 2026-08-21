@@ -1,5 +1,6 @@
 import { createDataProvider, CreateDataProviderOptions } from "@refinedev/rest";
 import type { HttpError } from "@refinedev/core";
+import { BACKEND_BASE_URL } from "@/constants";
 
 type ListResponse<T = unknown> = {
   data?: T[];
@@ -15,9 +16,6 @@ type CreateResponse<T = unknown> = {
 type GetOneResponse<T = unknown> = {
   data?: T;
 };
-
-const BACKEND_BASE_URL =
-  import.meta.env.VITE_BACKEND_BASE_URL ?? "http://localhost:4000";
 
 const buildHttpError = async (response: Response): Promise<HttpError> => {
   let message = 'Request failed';
