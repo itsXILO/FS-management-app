@@ -1,5 +1,4 @@
-import AgentAPI from "apminsight";
-AgentAPI.config()
+import "apminsight";
 import { config, parse } from "dotenv";
 import express from "express";
 import cors from "cors";
@@ -9,6 +8,7 @@ import userRouter from "./routes/users.js";
 import { fileURLToPath } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
 import securityMiddleware from "./middleware/security.js";
+import sessionMiddleware from "./middleware/session.js";
 import { auth } from "./lib/auth.js";
 import { toNodeHandler } from "better-auth/node";
 
@@ -24,7 +24,7 @@ if (existsSync(envPath)) {
 config({ path: envPath, override: true });
 
 const app = express();
-const PORT = 4000;
+const PORT = Number(process.env.PORT) || 4000;
 const authHandler = toNodeHandler(auth);
 
 // CORS configuration to allow requests from the frontend
@@ -37,6 +37,7 @@ app.use(cors({
 app.use('/api/auth', authHandler);
 
 app.use(express.json());
+app.use(sessionMiddleware);
 app.use(securityMiddleware);
 app.use("/api/subjects", subjectRouter);
 app.use("/api/users", userRouter);

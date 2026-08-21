@@ -3,11 +3,6 @@ import aj from "../config/arcjet.js";
 import { ArcjetNodeRequest, slidingWindow } from "@arcjet/node";
 
 type RateLimitRole = "admin" | "teacher" | "student" | "guest";
-type RequestWithUser = Request & {
-    user?: {
-        role?: Exclude<RateLimitRole, "guest">;
-    };
-};
 
 const rateLimitClients = {
     admin: aj.withRule(
@@ -54,7 +49,7 @@ const securityMiddleware = async (req: Request, res: Response, next: NextFunctio
         return next();
     }
     try{
-        const role: RateLimitRole = (req as RequestWithUser).user?.role ?? 'guest';
+        const role: RateLimitRole = req.user?.role ?? 'guest';
 
         const client = rateLimitClients[role];
         const rateLimitMessage = rateLimitMessages[role];
@@ -81,7 +76,7 @@ const securityMiddleware = async (req: Request, res: Response, next: NextFunctio
         }
 
         if(decision.isDenied() && decision.reason.isRateLimit()){
-            return res.status(403).json({ error: 'Forbidden', message: rateLimitMessage });
+            return res.status(429).json({ error: 'Too Many Requests', message: rateLimitMessage });
         }
 
         next();

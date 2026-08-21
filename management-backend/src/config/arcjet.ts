@@ -1,4 +1,4 @@
-import arcjet, { detectBot, shield, tokenBucket, slidingWindow} from "@arcjet/node";
+import arcjet, { detectBot, shield } from "@arcjet/node";
 import { config } from "dotenv";
 import { fileURLToPath } from "node:url";
 
@@ -46,16 +46,9 @@ const aj = arcjet({
 
       ],
 
-    }),
-
-    // Create a token bucket rate limit. Other algorithms are supported.
-
-    slidingWindow({
-        
-      mode: "LIVE", // Blocks requests. Use "DRY_RUN" to log only
-      interval: '2s',
-      max:5,
     })
+
+    // Rate limiting is handled per-role in src/middleware/security.ts
 
   ],
 
