@@ -10,7 +10,7 @@ import { useTable } from "@refinedev/react-table";
 import { DataTable } from "@/components/refine-ui/data-table/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { useList } from "@refinedev/core";
+import { useList, useGetIdentity } from "@refinedev/core";
 import type { Subject, User } from "@/types/index";
 
 type ClassRow = {
@@ -32,6 +32,9 @@ function ClassesList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [selectedTeacher, setSelectedTeacher] = useState("all");
+
+  const { data: identity } = useGetIdentity<{ role?: string }>();
+  const canCreateClasses = identity?.role === "teacher";
 
   const { result: subjectListResult } = useList<Subject>({
     resource: "subjects",
@@ -238,7 +241,7 @@ function ClassesList() {
               </SelectContent>
             </Select>
 
-            <CreateButton resource="classes" />
+            {canCreateClasses && <CreateButton resource="classes" />}
           </div>
         </div>
       </div>

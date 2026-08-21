@@ -4,6 +4,7 @@ import { and, desc, eq, getTableColumns, ilike, or, sql } from 'drizzle-orm';
 import { classes, subjects, user } from '../db/schema/index.js';
 import type { ClassSchedule } from '../db/schema/index.js';
 import db from '../db/index.js';
+import requireRole from '../middleware/require-role.js';
 
 const router = express.Router();
 
@@ -82,7 +83,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireRole('teacher'), async (req, res) => {
     try{
         const { name, teacherId, subjectId, capacity, description, status, bannerUrl, bannerCldPubId, schedules } = req.body ?? {};
 
@@ -134,7 +135,16 @@ router.post('/', async (req, res) => {
         res.status(201).json({ data: createdClass });
     } catch(e){
         // Postgres foreign key / check violations -> bad request instead of 500
-        if(typeof e === 'object' && e !== null && 'code' in e && String((e as { code: unknown }).code).startsWith('23')){
+        // (drizzle wraps driver errors, so the code may sit on e.cause)
+        const pgCode = (e: unknown): string | undefined => {
+            if (typeof e === 'object' && e !== null) {
+                if ('code' in e) return String((e as { code: unknown }).code);
+                if ('cause' in e) return pgCode((e as { cause: unknown }).cause);
+            }
+            return undefined;
+        };
+
+        if (pgCode(e)?.startsWith('23')) {
             console.error(`POST /classes constraint error: ${e}`);
             return res.status(400).json({ error: 'Bad request', message: 'Invalid subjectId, teacherId or status' });
         }

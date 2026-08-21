@@ -13,11 +13,15 @@ import { DataTable } from "@/components/refine-ui/data-table/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge.tsx";
 import { useEffect } from "react";
+import { useGetIdentity } from "@refinedev/core";
 
 
 export function SubjectsList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
+
+  const { data: identity } = useGetIdentity<{ role?: string }>();
+  const canCreateSubjects = identity?.role === "teacher" || identity?.role === "admin";
 
   const departmentFilter = selectedDepartment !== "all" ? [
     {
@@ -130,8 +134,7 @@ export function SubjectsList() {
                     ))}
                 </SelectContent>
             </Select>
-            <CreateButton />
-
+            {canCreateSubjects && <CreateButton />}
           </div>
         </div>
       </div>

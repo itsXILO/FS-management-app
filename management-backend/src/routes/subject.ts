@@ -2,6 +2,7 @@ import { and, desc, eq, getTableColumns, ilike, or, sql } from 'drizzle-orm';
 import { departments, subjects } from '../db/schema/index.js';
 import express from 'express';
 import db from '../db/index.js';
+import requireRole from '../middleware/require-role.js';
 
 const router = express.Router();
 
@@ -69,7 +70,7 @@ router.get('/', async (req, res) => {
 });
 
 // create a new subject
-router.post('/', async (req, res) => {
+router.post('/', requireRole('teacher', 'admin'), async (req, res) => {
     try{
         const { name, code, description, department } = req.body ?? {};
 
