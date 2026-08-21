@@ -74,8 +74,17 @@ jobs:
             exit 1
           fi
 
+          # normalize .env: compose/env_file pass surrounding quotes through
+          # literally, which breaks values like DATABASE_URL
+          sed -i -E 's/^([A-Za-z_][A-Za-z0-9_]*)="(.*)"$/\1=\2/' management-backend/.env
+
           # sudo works whether or not the sshd session picked up docker group membership
-          sudo docker compose up -d --build
+          if ! sudo docker compose up -d --build; then
+            echo "::group::Backend container logs"
+            sudo docker compose logs --no-color --tail=50 backend || true
+            echo "::endgroup::"
+            exit 1
+          fi
           sudo docker image prune -f
           REMOTE
 
