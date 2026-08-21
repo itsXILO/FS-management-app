@@ -1,0 +1,40 @@
+name: classroom
+
+services:
+  backend:
+    build:
+      context: ./management-backend
+      dockerfile: Dockerfile
+    # loads DATABASE_URL, BETTER_AUTH_SECRET, ARCJET_KEY, PORT, etc.
+    env_file:
+      - ./management-backend/.env
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./management-refine-based-frontend
+      dockerfile: Dockerfile
+      # Vite bakes these at build time; override via a root .env if needed.
+      # The browser calls the API on the host-published port, hence localhost:4000.
+      args:
+        VITE_BACKEND_BASE_URL: ${VITE_BACKEND_BASE_URL:-http://localhost:4000}
+        VITE_CLOUDINARY_CLOUD_NAME: ${VITE_CLOUDINARY_CLOUD_NAME:-dmnu03v9k}
+        VITE_CLOUDINARY_UPLOAD_PRESET: ${VITE_CLOUDINARY_UPLOAD_PRESET:-classroom_app}
+    # host 5173 -> container 3000 so the origin matches the backend's
+    # FRONTEND_URL (http://localhost:5173) for CORS + better-auth cookies
+    ports:
+      - "5173:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+# no database service needed: the app uses a hosted Neon Postgres instance
