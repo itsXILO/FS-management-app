@@ -80,7 +80,14 @@ jobs:
 
           # sudo works whether or not the sshd session picked up docker group membership
           if ! sudo docker compose up -d --build; then
-            echo "::group::Backend container logs"
+            echo "::group::Diagnostics"
+            sudo docker compose ps -a || true
+            echo "--- backend health state ---"
+            sudo docker inspect classroom-backend-1 --format '{{json .State.Health}}' 2>/dev/null | head -c 800 || true
+            echo ""
+            echo "--- in-container probe ---"
+            sudo docker exec classroom-backend-1 node -e "fetch('http://127.0.0.1:4000/').then(r=>console.log('HTTP',r.status)).catch(e=>console.error('PROBE FAIL:',e.message))" 2>&1 || true
+            echo "--- backend logs ---"
             sudo docker compose logs --no-color --tail=50 backend || true
             echo "::endgroup::"
             exit 1
