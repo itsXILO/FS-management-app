@@ -47,36 +47,26 @@ export const DEPARTMENT_OPTIONS = DEPARTMENTS.map((dept) => ({
   label: dept,
 }));
 
-export const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB in bytes
-export const ALLOWED_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
-  "image/webp",
-];
-
-const requireEnv = (key: keyof ImportMetaEnv): string => {
+const envOr = (key: keyof ImportMetaEnv, fallback = ""): string => {
   const value = import.meta.env[key];
 
   if (!value || value.trim() === "") {
-    throw new Error(
-      `Missing required environment variable: ${key}. Add it to your .env file.`,
+    if (fallback) return fallback;
+
+    console.warn(
+      `Missing environment variable: ${key}. Add it to your .env file. ` +
+        `See .env.example for the full list.`,
     );
+    return "";
   }
 
   return value;
 };
 
-export const CLOUDINARY_UPLOAD_URL = requireEnv("VITE_CLOUDINARY_UPLOAD_URL");
-export const CLOUDINARY_CLOUD_NAME = requireEnv("VITE_CLOUDINARY_CLOUD_NAME");
-export const BACKEND_BASE_URL = requireEnv("VITE_BACKEND_BASE_URL");
+export const CLOUDINARY_CLOUD_NAME = envOr("VITE_CLOUDINARY_CLOUD_NAME");
+export const CLOUDINARY_UPLOAD_PRESET = envOr("VITE_CLOUDINARY_UPLOAD_PRESET");
 
-export const BASE_URL = requireEnv("VITE_API_URL");
-export const ACCESS_TOKEN_KEY = requireEnv("VITE_ACCESS_TOKEN_KEY");
-export const REFRESH_TOKEN_KEY = requireEnv("VITE_REFRESH_TOKEN_KEY");
-
-export const REFRESH_TOKEN_URL = `${BASE_URL}/refresh-token`;
-
-export const CLOUDINARY_UPLOAD_PRESET = requireEnv(
-  "VITE_CLOUDINARY_UPLOAD_PRESET",
+export const BACKEND_BASE_URL = envOr(
+  "VITE_BACKEND_BASE_URL",
+  "http://localhost:4000",
 );

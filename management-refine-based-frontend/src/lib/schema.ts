@@ -12,11 +12,18 @@ export const facultySchema = z.object({
 });
 
 export const subjectSchema = z.object({
-  name: z.string().min(3, "Subject name must be at least 3 characters"),
-  code: z.string().min(5, "Subject code must be at least 5 characters"),
+  name: z
+    .string()
+    .min(3, "Subject name must be at least 3 characters")
+    .max(255, "Subject name must be at most 255 characters"),
+  code: z
+    .string()
+    .min(5, "Subject code must be at least 5 characters")
+    .max(10, "Subject code must be at most 10 characters"),
   description: z
     .string()
-    .min(5, "Subject description must be at least 5 characters"),
+    .min(5, "Subject description must be at least 5 characters")
+    .max(255, "Subject description must be at most 255 characters"),
   department: z
     .string()
     .min(2, "Subject department must be at least 2 characters"),

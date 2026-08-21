@@ -1,5 +1,5 @@
 import { createDataProvider, CreateDataProviderOptions } from "@refinedev/rest";
-import { HttpError } from "node_modules/@refinedev/core/dist/contexts/data/types";
+import type { HttpError } from "@refinedev/core";
 
 type ListResponse<T = unknown> = {
   data?: T[];
@@ -103,6 +103,7 @@ const options: CreateDataProviderOptions = {
     buildBodyParams: async ({ variables }) => variables,
 
     mapResponse: async (response) => {
+      if(!response.ok) throw await buildHttpError(response);
       const json: CreateResponse = await response.json();
       return json.data ?? {};
     },
@@ -112,6 +113,7 @@ const options: CreateDataProviderOptions = {
     getEndpoint: ({ resource, id }) => `api/${resource}/${id}`,
 
     mapResponse: async (response) => {
+      if(!response.ok) throw await buildHttpError(response);
       const json: GetOneResponse = await response.json();
       return json.data ?? {};
     },

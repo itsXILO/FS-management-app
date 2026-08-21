@@ -27,9 +27,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { BACKEND_BASE_URL } from "@/constants";
 import { useBack } from "@refinedev/core";
 import { Loader2 } from "lucide-react";
-import { classSchema } from "../../lib/schema";
+import { classSchema } from "@/lib/schema";
 import UploadWidget from "@/components/upload-widget";
-import type { Subject, User } from "../../types/index";
+import type { Subject, User } from "@/types/index";
 import z from "zod";
 import { useEffect, useState } from "react";
 

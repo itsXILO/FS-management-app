@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import {
   useActiveAuthProvider,
   useLogout,
-  useRefineOptions,
 } from "@refinedev/core";
 import { LogOutIcon } from "lucide-react";
 
