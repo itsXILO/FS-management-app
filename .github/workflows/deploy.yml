@@ -57,6 +57,14 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
             "$EC2_USER@$EC2_HOST" bash -s <<'REMOTE'
           set -euo pipefail
+
+          # one-time: install Docker + compose plugin if missing
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker not found — installing..."
+            curl -fsSL https://get.docker.com | sudo sh
+            sudo usermod -aG docker "$USER" || true
+          fi
+
           cd /opt/classroom
 
           if [ ! -f management-backend/.env ]; then
@@ -66,8 +74,9 @@ jobs:
             exit 1
           fi
 
-          docker compose up -d --build
-          docker image prune -f
+          # sudo works whether or not the sshd session picked up docker group membership
+          sudo docker compose up -d --build
+          sudo docker image prune -f
           REMOTE
 
       - name: Smoke test
