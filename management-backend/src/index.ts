@@ -29,9 +29,21 @@ const PORT = Number(process.env.PORT) || 4000;
 const authHandler = toNodeHandler(auth);
 
 // CORS configuration to allow requests from the frontend
+const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+
 app.use(cors({
-	origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
-	methods: ['GET', 'POST', 'PUT', 'DELETE'],
+	origin: (origin, callback) => {
+		// allow non-browser clients (no Origin header) and the configured frontend
+		if (!origin || origin === frontendUrl) {
+			callback(null, true);
+			return;
+		}
+		// in development also allow any localhost/127.0.0.1 port (vite may pick e.g. 5174)
+		const isLocalDev = process.env.NODE_ENV !== "production"
+			&& /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+		callback(null, isLocalDev);
+	},
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 	credentials: true
 }))
 
