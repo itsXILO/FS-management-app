@@ -150,3 +150,64 @@ export type QuizDetail = Quiz & {
   isOwner: boolean;
   questions: QuizQuestion[];
 };
+
+export type AttendanceStatus = 'present' | 'absent' | 'late';
+
+export type AttendanceSession = {
+  id: number;
+  classId: number;
+  title: string;
+  date: string;
+  recordCount?: number;
+  createdAt?: string;
+};
+
+export type AttendanceRecord = {
+  id: number;
+  sessionId: number;
+  studentId: string;
+  status: AttendanceStatus;
+  markedAt: string;
+};
+
+export type AttendanceStudentRecord = {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  status: AttendanceStatus | null;
+  recordId: number | null;
+};
+
+export type AttendanceSummary = {
+  classId: number;
+  className: string;
+  totalSessions: number;
+  present: number;
+  absent: number;
+  late: number;
+};
+
+export type QuizAttemptResult = {
+  attempt: {
+    id: number;
+    startedAt: string;
+    submittedAt: string | null;
+    score: number | null;
+    totalQuestions: number;
+    percentage: number;
+  };
+  quiz: {
+    id: number;
+    title: string;
+    classId: number;
+    className: string;
+  };
+  answers: {
+    questionId: number;
+    selectedOptionId: number;
+    isCorrect: boolean;
+    questionText: string;
+    optionText: string;
+  }[];
+};

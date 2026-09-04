@@ -1,4 +1,4 @@
-import { timestamp, integer, boolean, pgTable, text, varchar, jsonb, pgEnum, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { timestamp, integer, boolean, pgTable, text, varchar, jsonb, pgEnum, index, uniqueIndex, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { user } from './auth.ts';
 
@@ -118,6 +118,30 @@ export const quizAnswers = pgTable('quiz_answers', {
 	quizAnswersAttemptIdIdx: index('quiz_answers_attempt_id_idx').on(table.attemptId)
 }));
 
+export const attendanceStatusEnum = pgEnum('attendance_status', ['present', 'absent', 'late']);
+
+export const attendanceSessions = pgTable('attendance_sessions', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	classId: integer('class_id').notNull().references(() => classes.id, { onDelete: 'cascade' }),
+	title: varchar('title', { length: 255 }).notNull(),
+	date: date('date').notNull(),
+	...timesstamp
+}, (table) => ({
+	attendanceSessionsClassIdIdx: index('attendance_sessions_class_id_idx').on(table.classId)
+}));
+
+export const attendanceRecords = pgTable('attendance_records', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	sessionId: integer('session_id').notNull().references(() => attendanceSessions.id, { onDelete: 'cascade' }),
+	studentId: text('student_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+	status: attendanceStatusEnum('status').notNull().default('absent'),
+	markedAt: timestamp('marked_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+	attendanceRecordsSessionIdIdx: index('attendance_records_session_id_idx').on(table.sessionId),
+	attendanceRecordsStudentIdIdx: index('attendance_records_student_id_idx').on(table.studentId),
+	attendanceRecordUniqueIdx: uniqueIndex('attendance_record_unique_idx').on(table.sessionId, table.studentId)
+}));
+
 
 export const departmentRelations = relations(departments, ({ many })=>({ subjects: many(subjects) }));
 
@@ -203,6 +227,25 @@ export const quizAnswerRelations = relations(quizAnswers, ({ one })=>({
 	})
 }));
 
+export const attendanceSessionRelations = relations(attendanceSessions, ({ one, many }) => ({
+	class: one(classes, {
+		fields: [attendanceSessions.classId],
+		references: [classes.id]
+	}),
+	records: many(attendanceRecords)
+}));
+
+export const attendanceRecordRelations = relations(attendanceRecords, ({ one }) => ({
+	session: one(attendanceSessions, {
+		fields: [attendanceRecords.sessionId],
+		references: [attendanceSessions.id]
+	}),
+	student: one(user, {
+		fields: [attendanceRecords.studentId],
+		references: [user.id]
+	})
+}));
+
 export type Department = typeof departments.$inferSelect;
 export type NewDepartment = typeof departments.$inferInsert;
 
@@ -226,3 +269,9 @@ export type NewQuestionOption = typeof questionOptions.$inferInsert;
 
 export type QuizAttempt = typeof quizAttempts.$inferSelect;
 export type NewQuizAttempt = typeof quizAttempts.$inferInsert;
+
+export type AttendanceSession = typeof attendanceSessions.$inferSelect;
+export type NewAttendanceSession = typeof attendanceSessions.$inferInsert;
+
+export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
+export type NewAttendanceRecord = typeof attendanceRecords.$inferInsert;

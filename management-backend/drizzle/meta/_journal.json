@@ -43,6 +43,13 @@
       "when": 1787319870339,
       "tag": "0005_open_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788529111157,
+      "tag": "0006_zippy_the_fury",
+      "breakpoints": true
     }
   ]
 }

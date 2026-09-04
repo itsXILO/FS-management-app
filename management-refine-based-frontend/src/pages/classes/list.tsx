@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useList, useGetIdentity } from "@refinedev/core";
 import { useNavigate } from "react-router";
-import { ListChecks } from "lucide-react";
+import { ClipboardList, ListChecks } from "lucide-react";
 import type { Subject, User } from "@/types/index";
 
 type ClassRow = {
@@ -185,6 +185,26 @@ function ClassesList() {
                     }
                   >
                     <ListChecks /> Quizzes
+                  </Button>
+                ),
+              } satisfies ColumnDef<ClassRow>,
+            ]
+          : []),
+        ...(canCreateClasses
+          ? [
+              {
+                id: "attendance_action",
+                size: 140,
+                header: () => <p className="column-title">Attendance</p>,
+                cell: ({ row }: { row: { original: ClassRow } }) => (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigate(`/classes/${row.original.id}/attendance`)
+                    }
+                  >
+                    <ClipboardList className="h-3.5 w-3.5" /> Attendance
                   </Button>
                 ),
               } satisfies ColumnDef<ClassRow>,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useGetIdentity } from "@refinedev/core";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, CalendarClock, ListChecks, Loader2, Plus, Timer } from "lucide-react";
+import { ArrowLeft, CalendarClock, ListChecks, Loader2, Plus, Timer, Trash2 } from "lucide-react";
 
 import { ListView } from "@/components/refine-ui/views/list-view";
 import { Breadcrumb } from "@/components/refine-ui/layout/breadcrumb";
@@ -121,6 +121,39 @@ function QuizzesList() {
                       until {deadline.text}
                     </span>
                   </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  {!isTeacher && deadline.isOpen && (
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/quizzes/${quiz.id}/take`)}
+                    >
+                      Take Quiz
+                    </Button>
+                  )}
+                  {!isTeacher && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/quizzes/${quiz.id}/result`)}
+                    >
+                      View Result
+                    </Button>
+                  )}
+                  {isTeacher && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => {
+                        if (confirm("Delete this quiz?")) {
+                          await fetch(`${BACKEND_BASE_URL}/api/quizzes/${quiz.id}`, { method: "DELETE", credentials: "include" });
+                          await loadQuizzes();
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             );

@@ -6,7 +6,7 @@ import routerProvider, {
   DocumentTitleHandler,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { BookOpen, Home, ListChecks } from "lucide-react";
+import { BookOpen, ClipboardList, Home, ListChecks } from "lucide-react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import "./App.css";
 import { Toaster } from "./components/refine-ui/notification/toaster.tsx";
@@ -23,6 +23,11 @@ import ClassesCreate from "./pages/classes/create.tsx";
 import QuizzesList from "./pages/classes/quizzes/list.tsx";
 import QuizzesCreate from "./pages/classes/quizzes/create.tsx";
 import QuizzesPage from "./pages/quizzes/list.tsx";
+import TakeQuizPage from "./pages/quizzes/take.tsx";
+import QuizResultPage from "./pages/quizzes/result.tsx";
+import AttendancePage from "./pages/attendance/list.tsx";
+import ClassAttendanceList from "./pages/classes/attendance/list.tsx";
+import MarkAttendancePage from "./pages/classes/attendance/mark.tsx";
 import LoginPage from "./pages/login.tsx";
 import RegisterPage from "./pages/register.tsx";
 import { useIsAuthenticated } from "@refinedev/core";
@@ -101,6 +106,14 @@ function App() {
                     label: "Quizzes",
                     icon: <ListChecks />
                   }
+                },
+                {
+                  name: "attendance",
+                  list: "/attendance",
+                  meta: {
+                    label: "Attendance",
+                    icon: <ClipboardList />
+                  }
                 }
               ]}
             >
@@ -121,8 +134,17 @@ function App() {
                       <Route index element={<QuizzesList />} />
                       <Route path="create" element={<QuizzesCreate />} />
                     </Route>
+                    <Route path=":classId/attendance">
+                      <Route index element={<ClassAttendanceList />} />
+                      <Route path=":sessionId/mark" element={<MarkAttendancePage />} />
+                    </Route>
                   </Route>
-                  <Route path="quizzes" element={<QuizzesPage />} />
+                  <Route path="quizzes">
+                    <Route index element={<QuizzesPage />} />
+                    <Route path=":quizId/take" element={<TakeQuizPage />} />
+                    <Route path=":quizId/result" element={<QuizResultPage />} />
+                  </Route>
+                  <Route path="attendance" element={<AttendancePage />} />
                 </Route>
               </Routes>
               <Toaster />
