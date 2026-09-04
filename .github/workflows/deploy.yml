@@ -20,11 +20,17 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
         run: |
+          if [ -z "$SSH_KEY" ] || [ -z "$EC2_HOST" ] || [ -z "$EC2_USER" ]; then
+            echo "::error::One or more required GitHub secrets (EC2_SSH_KEY, EC2_HOST, EC2_USER) are missing!"
+            echo "::error::Please add EC2_SSH_KEY, EC2_HOST, and EC2_USER in Repository Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Prepare deploy directory
         env:
