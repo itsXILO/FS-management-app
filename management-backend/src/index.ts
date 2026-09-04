@@ -1,4 +1,6 @@
-import "apminsight";
+if (!process.env.VERCEL) {
+	await import("apminsight");
+}
 import { config, parse } from "dotenv";
 import express from "express";
 import cors from "cors";
