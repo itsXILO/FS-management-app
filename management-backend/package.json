@@ -37,6 +37,7 @@
   },
   "allowScripts": {
     "@apminsight/native-stats": true,
-    "esbuild": true
+    "esbuild": true,
+    "fsevents": true
   }
 }
