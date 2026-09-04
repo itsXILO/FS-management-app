@@ -71,7 +71,11 @@ app.get("/", (_req, res) => {
 	res.json({ message: "Server is running" });
 });
 
-app.listen(PORT, () => {
-	const url = `http://localhost:${PORT}`;
-	console.log(`Server started at ${url}`);
-});
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+	app.listen(PORT, () => {
+		const url = `http://localhost:${PORT}`;
+		console.log(`Server started at ${url}`);
+	});
+}
+
+export default app;
