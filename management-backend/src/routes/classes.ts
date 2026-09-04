@@ -1,7 +1,7 @@
 import express from 'express';
 import { randomBytes } from 'node:crypto';
 import { and, desc, eq, getTableColumns, ilike, or, sql } from 'drizzle-orm';
-import { classes, subjects, user } from '../db/schema/index.js';
+import { classes, subjects, user, enrollments } from '../db/schema/index.js';
 import type { ClassSchedule } from '../db/schema/index.js';
 import db from '../db/index.js';
 import requireRole from '../middleware/require-role.js';
@@ -152,5 +152,83 @@ router.post('/', requireRole('teacher'), async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 })
+
+// Enroll current user in a class using the invite code
+router.post('/:classId/enroll', requireRole(), async (req, res) => {
+    try {
+        const classId = Number(req.params.classId);
+        if (!Number.isInteger(classId) || classId < 1) {
+            return res.status(400).json({ error: 'Bad request', message: 'classId must be a positive integer' });
+        }
+
+        const { inviteCode } = req.body ?? {};
+        if (!inviteCode || typeof inviteCode !== 'string') {
+            return res.status(400).json({ error: 'Bad request', message: 'inviteCode is required' });
+        }
+
+        const [cls] = await db.select().from(classes).where(eq(classes.id, classId)).limit(1);
+        if (!cls) return res.status(404).json({ error: 'Not found', message: 'Class not found' });
+        if (cls.inviteCode !== inviteCode.trim()) {
+            return res.status(403).json({ error: 'Forbidden', message: 'Invalid invite code' });
+        }
+
+        const studentId = req.user!.id;
+        const [existing] = await db
+            .select()
+            .from(enrollments)
+            .where(and(eq(enrollments.classId, classId), eq(enrollments.studentId, studentId)))
+            .limit(1);
+        if (existing) return res.status(409).json({ error: 'Conflict', message: 'Already enrolled in this class' });
+
+        const [enrollment] = await db
+            .insert(enrollments)
+            .values({ classId, studentId })
+            .returning();
+
+        res.status(201).json({ data: enrollment });
+    } catch (e) {
+        console.error(`POST /classes/:classId/enroll error:`, e);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Admin/teacher: directly add a student to a class (useful for seeding/admin tools)
+router.post('/:classId/students', requireRole('teacher', 'admin'), async (req, res) => {
+    try {
+        const classId = Number(req.params.classId);
+        if (!Number.isInteger(classId) || classId < 1) {
+            return res.status(400).json({ error: 'Bad request', message: 'classId must be a positive integer' });
+        }
+
+        const { studentId } = req.body ?? {};
+        if (!studentId || typeof studentId !== 'string') {
+            return res.status(400).json({ error: 'Bad request', message: 'studentId is required' });
+        }
+
+        const [cls] = await db.select().from(classes).where(eq(classes.id, classId)).limit(1);
+        if (!cls) return res.status(404).json({ error: 'Not found', message: 'Class not found' });
+
+        if (req.user!.role !== 'admin' && cls.teacherId !== req.user!.id) {
+            return res.status(403).json({ error: 'Forbidden', message: 'You can only add students to your own classes' });
+        }
+
+        const [existing] = await db
+            .select()
+            .from(enrollments)
+            .where(and(eq(enrollments.classId, classId), eq(enrollments.studentId, studentId)))
+            .limit(1);
+        if (existing) return res.status(409).json({ error: 'Conflict', message: 'Student already enrolled' });
+
+        const [enrollment] = await db
+            .insert(enrollments)
+            .values({ classId, studentId })
+            .returning();
+
+        res.status(201).json({ data: enrollment });
+    } catch (e) {
+        console.error(`POST /classes/:classId/students error:`, e);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
 export default router;
