@@ -37,7 +37,10 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=6 \
             "$EC2_USER@$EC2_HOST" \
             "sudo mkdir -p /opt/classroom && sudo chown $EC2_USER /opt/classroom"
 
@@ -52,7 +55,7 @@ jobs:
             --exclude 'dist' \
             --exclude '.env' \
             --exclude '.npm-debug.log*' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new" \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=6" \
             ./ "$EC2_USER@$EC2_HOST:/opt/classroom/"
 
       - name: Build & restart containers
@@ -60,7 +63,10 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=6 \
             "$EC2_USER@$EC2_HOST" bash -s <<'REMOTE'
           set -euo pipefail
 
@@ -69,6 +75,17 @@ jobs:
             echo "Docker not found — installing..."
             curl -fsSL https://get.docker.com | sudo sh
             sudo usermod -aG docker "$USER" || true
+          fi
+
+          # small instances run out of RAM while building both images in parallel
+          # (kernel OOM-killer kills sshd -> "Broken pipe"). Create swap if missing.
+          if ! swapon --show | grep -q .; then
+            echo "No swap — creating a 1G swapfile..."
+            sudo fallocate -l 1G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=1024
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+            grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
           fi
 
           cd /opt/classroom
@@ -85,7 +102,10 @@ jobs:
           sed -i -E 's/^([A-Za-z_][A-Za-z0-9_]*)="(.*)"$/\1=\2/' management-backend/.env
 
           # sudo works whether or not the sshd session picked up docker group membership
-          if ! sudo docker compose up -d --build; then
+          # COMPOSE_PARALLEL_LIMIT=1 builds the images one at a time to avoid OOM
+          if ! sudo env COMPOSE_PARALLEL_LIMIT=1 \
+                    DOCKER_BUILDKIT=1 \
+                    docker compose up -d --build; then
             echo "::group::Diagnostics"
             sudo docker compose ps -a || true
             echo "--- backend health state ---"
