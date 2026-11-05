@@ -1,10 +1,15 @@
 # Classroom Management System
 
-A full-stack classroom management platform where teachers create classes, subjects, and quizzes, take attendance, and manage enrollments. Students enroll via invite codes, take timed quizzes, and view their results.
+A full-stack classroom management platform that puts everyday teaching workflows in one place. Teachers create subjects and classes, enroll students with invite codes, publish timed quizzes, take attendance, and review results. Students join classes in seconds, take quizzes with a live countdown, and get instant per-question feedback. Administrators get a searchable directory of users and a central view of classes and activity.
+
+It is built as two independently deployable apps — an Express + Drizzle API and a React + Refine SPA — with PostgreSQL, cookie-based auth, and production-ready Docker/nginx setup.
 
 ## Table of Contents
 
-- [Features](#features)
+- [What It Does](#what-it-does)
+- [Feature Highlights](#feature-highlights)
+- [How It Helps](#how-it-helps)
+- [Roles at a Glance](#roles-at-a-glance)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
@@ -17,22 +22,109 @@ A full-stack classroom management platform where teachers create classes, subjec
 - [API Reference](#api-reference)
 - [Database Schema](#database-schema)
 - [Security](#security)
+- [Available Scripts](#available-scripts)
 - [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ---
 
-## Features
+## What It Does
 
-- **Authentication & Authorization** — Email/password auth via Better Auth with role-based access (Admin, Teacher, Student)
-- **Subjects & Classes** — Create, list, filter, and paginate subjects and classes with department grouping
-- **Class Banners** — Upload class banner images via Cloudinary unsigned upload widget
-- **Invite Code Enrollment** — Auto-generated 12-character hex invite codes for student enrollment
-- **Class Schedules** — JSON-based scheduling with day, start time, and end time per class
-- **Quizzes** — Create quizzes with dynamic questions and options (2–4 options each), deadlines, and configurable durations
-- **Timed Quiz Attempts** — Students get one attempt per quiz, auto-scored with per-question review
-- **Attendance** — Create attendance sessions, mark students present/absent/late, and view summaries
-- **Dashboard** — Refine-powered dashboard with Kbar command palette (⌘K), dark/light/system theme toggle
-- **Responsive UI** — shadcn/ui components, TanStack Table with pagination, skeleton loaders, and toast notifications
+| Module | Capabilities |
+|--------|--------------|
+| **Authentication** | Email/password sign-up and sign-in, persistent sessions, role selection at registration, protected routes, sign-out |
+| **Subjects** | Create subjects with name, unique code, description, and department; browse with search, department filter, and pagination |
+| **Classes** | Create classes under a subject with a teacher, capacity, status, description, weekly schedule, and banner image; browse and filter by name/invite code, subject, or teacher |
+| **Enrollment** | Auto-generated 12-character invite codes; students self-enroll; teachers/admins can add students directly; duplicate-enrollment protection |
+| **Quizzes** | Author quizzes per class with 1–100 questions, 2–4 options per question, a correct answer per question, a deadline, and a duration (1–600 minutes) |
+| **Quiz Attempts** | Enrolled students start one attempt per quiz; questions are served without the answer key; live countdown; auto-submit at time-up; instant auto-scoring |
+| **Results** | Students see score, percentage, a performance label, and a per-question review of their answers; teachers can view every student's attempt |
+| **Attendance** | Create dated attendance sessions per class; mark each student present/absent/late; bulk "mark all"; edit existing records; view session and per-class summaries |
+| **User Directory** | Paginated user list with search by name/email and filter by role; powers teacher and student pickers |
+| **Dashboard & UX** | Refine-powered admin shell, Kbar command palette (⌘K), dark/light/system themes, responsive layouts, skeletons, toasts, and unsaved-changes warnings |
+
+---
+
+## Feature Highlights
+
+### Teaching & class management
+
+- **Subjects organized by department** — Group courses under departments such as Computer Science, Mathematics, or Engineering. Departments are resolved case-insensitively and created automatically when a new one is used.
+- **Rich class records** — Each class stores a name, subject, owning teacher, capacity (default 50), status (`active` / `inactive` / `archived`), description, weekly schedule, and an optional Cloudinary banner.
+- **Flexible schedules** — Schedules are stored as JSON, so a class can meet on multiple days with different start and end times.
+- **Searchable class directory** — Search by class name or invite code, and filter by subject or teacher. Tables paginate with TanStack Table.
+- **Direct roster management** — Teachers and admins can add students to a class without sharing an invite code. Students can also self-enroll using the class's invite code.
+
+### Assessment & grading
+
+- **Quiz builder with dynamic questions** — Add and remove questions on the fly, give each question 2–4 options, and mark the correct answer. Up to 100 questions per quiz.
+- **Deadlines and durations** — Every quiz has a future deadline and a time limit. Closed quizzes cannot be started; attempts auto-submit when the countdown reaches zero.
+- **One attempt per student** — The API enforces a single attempt per student per quiz, preventing retakes and duplicate submissions.
+- **Answer-key protection** — Students receive questions and options without the `isCorrect` flag; only the owning teacher sees the full answer key.
+- **Automatic scoring** — Answers are graded on submit and stored per question, producing a score and percentage immediately.
+- **Per-question review** — Students can revisit their attempt to see each question, the answer they selected, and whether it was correct.
+- **Class-wide visibility** — Teachers and admins can list all attempts for a quiz to see who has submitted and how they scored.
+
+### Attendance
+
+- **Session-based tracking** — Create named, dated sessions for a class (for example, "Week 3 — Monday").
+- **Three-state marking** — Mark each student `present`, `absent`, or `late`, with one-click bulk actions and live counts.
+- **Editable records** — Re-open a session to update statuses; records are upserted rather than duplicated.
+- **Student summaries** — Students see attendance totals across every class they are enrolled in, broken down by present/absent/late.
+- **Teacher overview** — A consolidated attendance page lists sessions across all of a teacher's classes and links straight to marking.
+
+### Student experience
+
+- **Fast onboarding** — Register with a name, email, password, and role, then join a class with a short invite code.
+- **Clear quiz list** — See quizzes from enrolled classes with class name, question count, duration, deadline, and open/closed status.
+- **Focused quiz-taking view** — One question at a time, progress tracking, answer selection, and a visible countdown timer.
+- **Instant results** — After submitting, students land on a result page with score, percentage, a performance label, and a detailed answer review.
+- **Personal attendance view** — A single page summarizes attendance for every enrolled class.
+
+### Platform & UX
+
+- **Role-aware interface** — Navigation and actions adapt to the signed-in user. Quiz lists are scoped by role: teachers see quizzes for their own classes, students see quizzes for classes they are enrolled in. Mutating routes are guarded by role and ownership checks.
+- **Cloudinary banner uploads** — A reusable upload widget handles image selection, preview, and removal using unsigned upload presets.
+- **Command palette** — Press `⌘K` / `Ctrl+K` to jump between pages and actions via Refine Kbar.
+- **Theme switching** — Dark, light, and system themes with the preference persisted in `localStorage`.
+- **Polished feedback** — Skeleton loaders while data loads, toast notifications for actions, empty states, and confirmation dialogs for destructive actions.
+- **Responsive by default** — Tailwind CSS 4 and shadcn/ui components work across desktop, tablet, and mobile.
+
+---
+
+## How It Helps
+
+- **Replaces scattered tools** — Class rosters, quizzes, grading, and attendance live in one app instead of spreadsheets, forms, and chat threads.
+- **Saves teachers time** — Invite codes remove manual roster entry, quizzes grade themselves, and attendance can be marked for the whole class in one click.
+- **Keeps students aligned** — Deadlines, durations, open/closed badges, and instant results make expectations and performance obvious.
+- **Protects assessment integrity** — One attempt per student, hidden answer keys, server-side grading, and deadline enforcement reduce cheating and accidental resubmissions.
+- **Turns activity into insight** — Attendance summaries surface absent and late patterns, while per-question quiz reviews give students clear, actionable feedback.
+- **Secure by default** — Session cookies, role guards, CORS allow-listing, Arcjet Shield, bot detection, and per-role rate limits protect the API.
+- **Easy to run and deploy** — One `docker compose up` serves the whole stack behind nginx, while separate Vercel configs support serverless hosting.
+- **Demo-ready** — Seed scripts create teachers, students, subjects, classes, enrollments, quizzes, attempts, and attendance so the app can be explored immediately.
+
+---
+
+## Roles at a Glance
+
+| Capability | Admin | Teacher | Student |
+|------------|:-----:|:-------:|:-------:|
+| Sign up / sign in | ✅ | ✅ | ✅ |
+| Browse subjects and classes | ✅ | ✅ | ✅ |
+| Create subjects | ✅ | ✅ | — |
+| Create classes | — | ✅ | — |
+| Add students directly to a class | ✅ | ✅ (own classes) | — |
+| Enroll via invite code | — | — | ✅ |
+| Create quizzes | — | ✅ (own classes) | — |
+| Delete quizzes | — | ✅ (own classes) | — |
+| Take a quiz | — | — | ✅ (enrolled) |
+| View all attempts for a quiz | ✅ | ✅ | — |
+| Create attendance sessions | ✅ | ✅ (own classes) | — |
+| Mark attendance | ✅ | ✅ (own classes) | — |
+| View own attendance summary | — | — | ✅ |
+| View user directory | ✅ | ✅ | ✅ |
+
+> Registration exposes Student and Teacher roles. Admin accounts are created directly in the database.
 
 ---
 
@@ -233,7 +325,7 @@ Frontend runs at `http://localhost:5173` (or 5174 if the port is taken).
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VITE_BACKEND_BASE_URL` | Backend URL | `http://localhost:5173` (local) / `same-origin` (Docker) / full URL (Vercel) |
+| `VITE_BACKEND_BASE_URL` | Backend URL | `http://localhost:4000` (local) / `same-origin` (Docker) / full URL (Vercel) |
 | `VITE_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | `dmnu03v9k` |
 | `VITE_CLOUDINARY_UPLOAD_PRESET` | Cloudinary unsigned upload preset | `classroom_app` |
 
@@ -334,7 +426,7 @@ All routes are under `/api` prefix. Authentication uses session cookies via Bett
 
 | Method | Endpoint | Role | Description |
 |--------|----------|------|-------------|
-| GET | `/api/users` | Admin | List users (paginated, filterable by role) |
+| GET | `/api/users` | Any | List users (paginated, search by name/email, filter by role) |
 
 ### Subjects
 
